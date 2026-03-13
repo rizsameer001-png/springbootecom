@@ -58,8 +58,11 @@ services:
     region: singapore
     branch: main
     autoDeploy: true
-    envVars:
-      # Since fromService won't work in build args, 
-      # it's often safer to use the predictable Render URL:
-      - key: VITE_API_URL
-        value: https://zulugshop-backend.onrender.com
+
+    dockerBuildArgs:
+      - name: VITE_API_URL
+        fromService:                   # auto-populated from backend service URL
+          name: zulugshop-backend
+          type: web
+          property: host
+          # Or set manually: value: https://zulugshop-backend.onrender.com
