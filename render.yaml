@@ -50,7 +50,7 @@ services:
 
   # ── Frontend: React + Nginx ───────────────────────────────────
   - type: web
-    name: frontend
+    name: zulugshop-frontend
     runtime: docker
     dockerfilePath: ./frontend/Dockerfile
     dockerContext: ./frontend
