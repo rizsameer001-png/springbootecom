@@ -1,0 +1,97 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────────
+#  ZuluGshop — Docker Compose (local development)
+#
+#  Services:
+#    mongo    → MongoDB 7 (local DB with persistent volume)
+#    backend  → Spring Boot 3.4 REST API  → http://localhost:8080
+#    frontend → React/Vite served by Nginx → http://localhost:3000
+#
+#  Commands:
+#    docker compose up --build        start all (rebuild images)
+#    docker compose up -d             start in background
+#    docker compose logs -f backend   follow backend logs
+#    docker compose down              stop everything
+#    docker compose down -v           stop + wipe DB volume
+# ─────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── MongoDB ───────────────────────────────────────────────────
+  mongo:
+    image: mongo:7.0
+    container_name: zulugshop-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"        # expose so Compass / Studio 3T can connect locally
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: zulugshop
+    volumes:
+      - mongo_data:/data/db  # data survives container restarts
+    networks:
+      - zulugshop-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ── Spring Boot Backend ───────────────────────────────────────
+  backend:
+    build:
+      context: ./zulugshop-backend   # your backend project root
+      dockerfile: Dockerfile
+    container_name: zulugshop-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # Use Docker service name 'mongo' as hostname inside the network
+      MONGODB_URI: mongodb://admin:password123@mongo:27017/zulugshop?authSource=admin
+      JWT_SECRET: local-dev-secret-CHANGE-in-production-min-32-chars
+      JWT_EXPIRATION: 86400000
+      FRONTEND_URL: http://localhost:3000
+      SPRING_PROFILES_ACTIVE: dev
+    depends_on:
+      mongo:
+        condition: service_healthy   # wait for mongo ping to succeed
+    networks:
+      - zulugshop-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s            # Spring Boot + dependency:go-offline needs time
+
+  # ── React / Nginx Frontend ────────────────────────────────────
+  frontend:
+    build:
+      context: ./zulugshop-frontend  # your frontend project root
+      dockerfile: Dockerfile
+      args:
+        # Vite bakes this URL into the JS bundle at build time
+        VITE_API_URL: http://localhost:8080
+    container_name: zulugshop-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"            # Nginx listens on 80 inside → map to 3000
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - zulugshop-net
+
+# ── Volumes ───────────────────────────────────────────────────────
+volumes:
+  mongo_data:
+    driver: local
+
+# ── Networks ──────────────────────────────────────────────────────
+networks:
+  zulugshop-net:
+    driver: bridge
