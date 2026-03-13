@@ -1,26 +1,17 @@
-# ─────────────────────────────────────────────────────────────────
-#  STAGE 1 — BUILD  (Maven + JDK 21)
-# ─────────────────────────────────────────────────────────────────
-FROM eclipse-temurin:21-jdk-alpine AS builder
-
+# STAGE 1 — BUILD (Using standard Maven image)
+FROM maven:3.9.6-eclipse-temurin-21-alpine AS builder
 WORKDIR /app
 
-# Cache dependency layer — only re-downloads when pom.xml changes
-COPY mvnw .
-COPY .mvn .mvn
+# Copy pom.xml first to cache dependencies
 COPY pom.xml .
-RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
+RUN mvn dependency:go-offline -B
 
-# Build fat JAR
+# Build the app
 COPY src src
-RUN ./mvnw clean package -DskipTests -B
+RUN mvn clean package -DskipTests -B
 
-# ─────────────────────────────────────────────────────────────────
-#  STAGE 2 — RUNTIME  (slim JRE, no build tools)
-# ─────────────────────────────────────────────────────────────────
+# STAGE 2 — RUNTIME
 FROM eclipse-temurin:21-jre-alpine AS runtime
-
-# Run as non-root for security
 RUN addgroup -S spring && adduser -S spring -G spring
 WORKDIR /app
 
@@ -30,10 +21,6 @@ USER spring
 
 EXPOSE 8080
 
-# Container-aware JVM flags:
-#   UseContainerSupport   -> respect cgroup memory limits
-#   MaxRAMPercentage=75   -> heap = 75% of container RAM
-#   urandom               -> fast startup (no /dev/random blocking)
 ENTRYPOINT ["java", \
   "-XX:+UseContainerSupport", \
   "-XX:MaxRAMPercentage=75.0", \

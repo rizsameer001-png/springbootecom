@@ -1,40 +1,40 @@
 # ─────────────────────────────────────────────────────────────────
-#  render.yaml — ZuluGshop Infrastructure as Code for Render.com
+#  render.yaml — ZuluGshop Infrastructure as Code
 # ─────────────────────────────────────────────────────────────────
 
 services:
 
-  # ── Backend: Spring Boot REST API ────────────────────────────
+  # ── Backend: Spring Boot ──────────────────────────────────────
   - type: web
     name: zulugshop-backend
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
-    plan: free                 
-    region: singapore           
+    plan: free
+    region: singapore
     branch: main
     healthCheckPath: /actuator/health
     autoDeploy: true
-
     envVars:
       - key: PORT
         value: 8080
-
-      - key: MONGODB_URI
-        sync: false             # Set this manually in the Render Dashboard
-
-      - key: JWT_SECRET
-        sync: false             # Set this manually in the Render Dashboard
-
-      - key: JWT_EXPIRATION
-        value: 86400000         # 24 hours in ms
-
-      - key: FRONTEND_URL
-        # We hardcode this to ensure the "https://" prefix is present for CORS
-        value: https://zulugshop-frontend.onrender.com
-
       - key: SPRING_PROFILES_ACTIVE
         value: prod
+      - key: FRONTEND_URL
+        value: https://zulugshop-frontend.onrender.com
+      
+      # Database Configuration
+      - key: MONGODB_URI
+        value: mongodb+srv://rizsameer001_db_user:apyzUNvvS0p0318K@cluster0.xbnnnsq.mongodb.net/springbootzuluecom
+      - key: SPRING_DATA_MONGODB_URI
+        value: mongodb+srv://rizsameer001_db_user:apyzUNvvS0p0318K@cluster0.xbnnnsq.mongodb.net/springbootzuluecom
+
+      # Note: You should still set JWT_SECRET manually for security, 
+      # or add it here if you want it fully automated:
+      - key: JWT_SECRET
+        value: "your-very-secret-key-here" 
+      - key: JWT_EXPIRATION
+        value: 86400000
 
   # ── Frontend: React + Nginx ───────────────────────────────────
   - type: web
@@ -46,9 +46,6 @@ services:
     region: singapore
     branch: main
     autoDeploy: true
-    
     envVars:
-      # React builds are static; VITE_API_URL must be available at build time.
-      # Render's Free Tier URLs are predictable: [service-name].onrender.com
       - key: VITE_API_URL
         value: https://zulugshop-backend.onrender.com
