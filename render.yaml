@@ -1,13 +1,5 @@
 # ─────────────────────────────────────────────────────────────────
 #  render.yaml — ZuluGshop Infrastructure as Code for Render.com
-#
-#  Deploy both services in one click:
-#    1. Push this file to your GitHub repo root
-#    2. Render.com → New → Blueprint → select your repo
-#    3. Set the environment variable secrets (marked sync: false)
-#    4. Click "Apply"
-#
-#  Render docs: https://render.com/docs/blueprint-spec
 # ─────────────────────────────────────────────────────────────────
 
 services:
@@ -18,32 +10,28 @@ services:
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
-    plan: free                         # free tier (512 MB RAM)
-    region: singapore                  # closest to India
+    plan: free                 
+    region: singapore           
     branch: main
-    healthCheckPath: /actuator/health  # Render polls this — must return 200
-    autoDeploy: true                   # redeploy on every push to main
+    healthCheckPath: /actuator/health
+    autoDeploy: true
 
     envVars:
       - key: PORT
         value: 8080
 
       - key: MONGODB_URI
-        sync: false                    # set manually in Render dashboard (secret)
+        sync: false             # Set this manually in the Render Dashboard
 
       - key: JWT_SECRET
-        sync: false                    # set manually in Render dashboard (secret)
+        sync: false             # Set this manually in the Render Dashboard
 
       - key: JWT_EXPIRATION
-        value: 86400000                # 24 hours in ms
+        value: 86400000         # 24 hours in ms
 
       - key: FRONTEND_URL
-        fromService:                   # auto-populated from the frontend service URL
-          name: frontend
-          type: web
-          property: host
-          # Render prepends https:// — set manually if this doesn't resolve
-          # value: https://zulugshop-frontend.onrender.com
+        # We hardcode this to ensure the "https://" prefix is present for CORS
+        value: https://zulugshop-frontend.onrender.com
 
       - key: SPRING_PROFILES_ACTIVE
         value: prod
@@ -58,8 +46,9 @@ services:
     region: singapore
     branch: main
     autoDeploy: true
+    
     envVars:
-      # Since fromService won't work in build args, 
-      # it's often safer to use the predictable Render URL:
+      # React builds are static; VITE_API_URL must be available at build time.
+      # Render's Free Tier URLs are predictable: [service-name].onrender.com
       - key: VITE_API_URL
         value: https://zulugshop-backend.onrender.com
