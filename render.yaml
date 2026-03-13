@@ -16,8 +16,8 @@ services:
   - type: web
     name: zulugshop-backend
     runtime: docker
-    dockerfilePath: ./zulugshop-backend/Dockerfile
-    dockerContext: ./zulugshop-backend
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
     plan: free                         # free tier (512 MB RAM)
     region: singapore                  # closest to India
     branch: main
@@ -39,7 +39,7 @@ services:
 
       - key: FRONTEND_URL
         fromService:                   # auto-populated from the frontend service URL
-          name: zulugshop-frontend
+          name: frontend
           type: web
           property: host
           # Render prepends https:// — set manually if this doesn't resolve
@@ -50,10 +50,10 @@ services:
 
   # ── Frontend: React + Nginx ───────────────────────────────────
   - type: web
-    name: zulugshop-frontend
+    name: frontend
     runtime: docker
-    dockerfilePath: ./zulugshop-frontend/Dockerfile
-    dockerContext: ./zulugshop-frontend
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
     plan: free
     region: singapore
     branch: main
